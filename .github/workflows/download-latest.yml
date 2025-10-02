@@ -53,44 +53,71 @@ jobs:
 
           cp -R "$INSTALL_VOL/BaseSystem" /tmp/BaseSystem
 
-  - name: Create ZIP of BaseSystem
-  run: |
-    cd /tmp
-    zip -r BaseSystem.zip BaseSystem/
+          name: Download and Upload BaseSystem
 
-- name: Upload BaseSystem.zip to GoFile.io
-  run: |
-    echo "📡 Pobieram serwer GoFile..."
-    RESPONSE=$(curl -s https://api.gofile.io/getServer)
+on:
+  push:
+    branches:
+      - main
 
-    if [ -z "$RESPONSE" ]; then
-      echo "❌ Brak odpowiedzi z API GoFile"
-      exit 1
-    fi
+jobs:
+  download-and-upload:
+    runs-on: ubuntu-latest
 
-    SERVER=$(echo "$RESPONSE" | jq -r '.data.server // empty')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    if [ -z "$SERVER" ]; then
-      echo "❌ Nie udało się uzyskać serwera z GoFile.io"
-      echo "Odpowiedź API: $RESPONSE"
-      exit 1
-    fi
+      # Tutaj możesz dodać swój krok pobierania BaseSystem jeśli potrzebujesz
+      # - name: Download BaseSystem
+      #   run: |
+      #     # komendy do pobrania BaseSystem do /tmp/BaseSystem
 
-    echo "✅ Serwer: $SERVER"
-    echo "⬆️ Wysyłam BaseSystem.zip..."
+      - name: List /tmp contents for debug
+        run: ls -la /tmp
 
-    UPLOAD=$(curl -s -X POST "https://$SERVER.gofile.io/uploadFile" \
-      -F "file=@/tmp/BaseSystem.zip" \
-      -F "description=BaseSystem from GitHub Action")
+      - name: Create ZIP of BaseSystem folder
+        run: |
+          if [ ! -d /tmp/BaseSystem ]; then
+            echo "❌ Folder /tmp/BaseSystem nie istnieje!"
+            exit 1
+          fi
+          cd /tmp
+          zip -r BaseSystem.zip BaseSystem/
 
-    echo "$UPLOAD" > /tmp/upload_response.json
-    cat /tmp/upload_response.json
+      - name: Upload BaseSystem.zip to GoFile.io
+        run: |
+          echo "📡 Pobieram serwer GoFile..."
+          RESPONSE=$(curl -s https://api.gofile.io/getServer)
 
-    URL=$(jq -r '.data.downloadPage // empty' /tmp/upload_response.json)
+          if [ -z "$RESPONSE" ]; then
+            echo "❌ Brak odpowiedzi z API GoFile"
+            exit 1
+          fi
 
-    if [ -z "$URL" ]; then
-      echo "❌ Nie udało się uzyskać linku do pobrania"
-      exit 1
-    fi
+          SERVER=$(echo "$RESPONSE" | jq -r '.data.server // empty')
 
-    echo "✅ Plik dostępny pod adresem: $URL"
+          if [ -z "$SERVER" ]; then
+            echo "❌ Nie udało się uzyskać serwera z GoFile.io"
+            echo "Odpowiedź API: $RESPONSE"
+            exit 1
+          fi
+
+          echo "✅ Serwer: $SERVER"
+          echo "⬆️ Wysyłam BaseSystem.zip..."
+
+          UPLOAD=$(curl -s -X POST "https://$SERVER.gofile.io/uploadFile" \
+            -F "file=@/tmp/BaseSystem.zip" \
+            -F "description=BaseSystem from GitHub Action")
+
+          echo "$UPLOAD" > /tmp/upload_response.json
+          cat /tmp/upload_response.json
+
+          URL=$(jq -r '.data.downloadPage // empty' /tmp/upload_response.json)
+
+          if [ -z "$URL" ]; then
+            echo "❌ Nie udało się uzyskać linku do pobrania"
+            exit 1
+          fi
+
+          echo "✅ Plik dostępny pod adresem: $URL"
