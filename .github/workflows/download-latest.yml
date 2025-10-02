@@ -1,4 +1,4 @@
-name: Tahoe Beta (latest) Recovery Image
+name: Tahoe builder 02-10 (latest) Recovery Image
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ jobs:
 
       - name: Download macOS Installer (latest beta)
         run: |
-          python ./gibMacOS/gibMacOS.py -c developer -v Tahoe -m 26 -o /tmp/Tahoe-beta-latest
+          python ./gibMacOS/gibMacOS.py -c release -v Tahoe -m 26 -o /tmp/Tahoe-stable-latest
 
       - name: Install the assistant
         run: |
@@ -55,9 +55,27 @@ jobs:
 
           cp -R "$INSTALL_VOL/BaseSystem" /tmp/BaseSystem
 
-      - name: Upload com.apple.recovery.boot
-        uses: actions/upload-artifact@v4
-        with:
-          name: com.apple.recovery.boot
-          path: /tmp/BaseSystem/*
-          compression-level: 9
+     
+          #Upload to GoFile.io
+        run: |
+          # 1. Ustal serwer
+          SERVER=$(curl -s https://api.gofile.io/getServer | jq -r '.data.server')
+          if [ -z "$SERVER" ]; then
+            echo "Nie udało się uzyskać serwera z Gofile.io"
+            exit 1
+          fi
+          echo "Używam serwera: $SERVER"
+
+          #Wgraj pliki (wszystkie z katalogu BaseSystem)
+          for FILE in /tmp/BaseSystem/*; do
+            echo "Wysyłam $FILE..."
+            curl -s -X POST "https://$SERVER.gofile.io/uploadFile" \
+              -F "file=@$FILE" \
+              -F "folderId=" \
+              -F "description=Uploaded from GitHub Action" \
+              -F "token=" > /tmp/upload_response.json
+
+            cat /tmp/upload_response.json
+            URL=$(jq -r '.data.downloadPage' /tmp/upload_response.json)
+            echo "Plik dostępny pod: $URL"
+          done
