@@ -11,16 +11,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Clone gibMacOS
-        run: |
-          git clone https://github.com/corpnewt/gibMacOS.git
+        run: git clone https://github.com/corpnewt/gibMacOS.git
 
       - name: Download macOS Installer (stable release)
-        run: |
-          python ./gibMacOS/gibMacOS.py -c release -v Tahoe -m 26 -o /tmp/Tahoe-stable-latest
+        run: python ./gibMacOS/gibMacOS.py -c release -v Tahoe -m 26 -o /tmp/Tahoe-stable-latest
 
       - name: Install the assistant
-        run: |
-          sudo installer -pkg /tmp/Tahoe-stable-latest/InstallAssistant.pkg -target /
+        run: sudo installer -pkg /tmp/Tahoe-stable-latest/InstallAssistant.pkg -target /
 
       - name: Generate macOS Installer
         run: |
@@ -53,24 +50,21 @@ jobs:
 
           cp -R "$INSTALL_VOL/BaseSystem" /tmp/BaseSystem
 
-      - name: Check copied BaseSystem contents
-        run: ls -la /tmp/BaseSystem
-
       - name: Upload BaseSystem artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: BaseSystem
           path: /tmp/BaseSystem
 
   download-and-upload:
-    runs-on: ubuntu-latest
     needs: build
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download BaseSystem artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: BaseSystem
           path: /tmp
