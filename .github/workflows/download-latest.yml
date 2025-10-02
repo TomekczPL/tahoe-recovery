@@ -53,27 +53,44 @@ jobs:
 
           cp -R "$INSTALL_VOL/BaseSystem" /tmp/BaseSystem
 
-      - name: Package BaseSystem as ZIP
-        run: |
-          cd /tmp
-          zip -r BaseSystem.zip BaseSystem
+  - name: Create ZIP of BaseSystem
+  run: |
+    cd /tmp
+    zip -r BaseSystem.zip BaseSystem/
 
-      - name: Upload to GoFile.io
-        run: |
-          SERVER=$(curl -s https://api.gofile.io/getServer | jq -r '.data.server')
-          if [ -z "$SERVER" ]; then
-            echo "Nie udało się uzyskać serwera z Gofile.io"
-            exit 1
-          fi
-          echo "Używam serwera: $SERVER"
+- name: Upload BaseSystem.zip to GoFile.io
+  run: |
+    echo "📡 Pobieram serwer GoFile..."
+    RESPONSE=$(curl -s https://api.gofile.io/getServer)
 
-          RESPONSE=$(curl -s -X POST "https://$SERVER.gofile.io/uploadFile" \
-            -F "file=@/tmp/BaseSystem.zip" \
-            -F "description=BaseSystem from GitHub Action" \
-            -F "token=")
+    if [ -z "$RESPONSE" ]; then
+      echo "❌ Brak odpowiedzi z API GoFile"
+      exit 1
+    fi
 
-          echo "$RESPONSE" > /tmp/upload_response.json
-          cat /tmp/upload_response.json
+    SERVER=$(echo "$RESPONSE" | jq -r '.data.server // empty')
 
-          URL=$(jq -r '.data.downloadPage' /tmp/upload_response.json)
-          echo "✅ Plik dostępny pod adresem: $URL"
+    if [ -z "$SERVER" ]; then
+      echo "❌ Nie udało się uzyskać serwera z GoFile.io"
+      echo "Odpowiedź API: $RESPONSE"
+      exit 1
+    fi
+
+    echo "✅ Serwer: $SERVER"
+    echo "⬆️ Wysyłam BaseSystem.zip..."
+
+    UPLOAD=$(curl -s -X POST "https://$SERVER.gofile.io/uploadFile" \
+      -F "file=@/tmp/BaseSystem.zip" \
+      -F "description=BaseSystem from GitHub Action")
+
+    echo "$UPLOAD" > /tmp/upload_response.json
+    cat /tmp/upload_response.json
+
+    URL=$(jq -r '.data.downloadPage // empty' /tmp/upload_response.json)
+
+    if [ -z "$URL" ]; then
+      echo "❌ Nie udało się uzyskać linku do pobrania"
+      exit 1
+    fi
+
+    echo "✅ Plik dostępny pod adresem: $URL"
